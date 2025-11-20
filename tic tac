@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+"""
+Tic-Tac-Toe (command-line)
+
+Features:
+- Play Human vs Human or Human vs Computer.
+- Unbeatable AI using minimax.
+- Clear board display and input validation.
+
+Run:
+    python tic_tac_toe.py
+"""
+from typing import List, Optional, Tuple
+
+WIN_COMBINATIONS = [
+    (0, 1, 2),
+    (3, 4, 5),
+    (6, 7, 8),
+    (0, 3, 6),
+    (1, 4, 7),
+    (2, 5, 8),
+    (0, 4, 8),
+    (2, 4, 6),
+]
+
+
+def display_board(board: List[str]) -> None:
+    def cell(i):
+        return board[i] if board[i] != " " else str(i + 1)
+
+    print()
+    print(f" {cell(0)} | {cell(1)} | {cell(2)} ")
+    print("---+---+---")
+    print(f" {cell(3)} | {cell(4)} | {cell(5)} ")
+    print("---+---+---")
+    print(f" {cell(6)} | {cell(7)} | {cell(8)} ")
+    print()
+
+
+def available_moves(board: List[str]) -> List[int]:
+    return [i for i, c in enumerate(board) if c == " "]
+
+
+def make_move(board: List[str], index: int, player: str) -> None:
+    board[index] = player
+
+
+def check_winner(board: List[str]) -> Optional[str]:
+    for a, b, c in WIN_COMBINATIONS:
+        if board[a] == board[b] == board[c] and board[a] != " ":
+            return board[a]
+    return None
+
+
+def is_full(board: List[str]) -> bool:
+    return all(c != " " for c in board)
+
+
+def minimax(board: List[str], depth: int, is_maximizing: bool, ai: str, human: str) -> Tuple[int, Optional[int]]:
+    winner = check_winner(board)
+    if winner == ai:
+        return 10 - depth, None
+    elif winner == human:
+        return depth - 10, None
+    elif is_full(board):
+        return 0, None
+
+    if is_maximizing:
+        best_score = -10_000
+        best_move = None
+        for move in available_moves(board):
+            board[move] = ai
+            score, _ = minimax(board, depth + 1, False, ai, human)
+            board[move] = " "
+            if score > best_score:
+                best_score = score
+                best_move = move
+        return best_score, best_move
+    else:
+        best_score = 10_000
+        best_move = None
+        for move in available_moves(board):
+            board[move] = human
+            score, _ = minimax(board, depth + 1, True, ai, human)
+            board[move] = " "
+            if score < best_score:
+                best_score = score
+                best_move = move
+        return best_score, best_move
+
+
+def ai_move(board: List[str], ai: str, human: str) -> int:
+    _, move = minimax(board, 0, True, ai, human)
+    if move is None:
+        # fallback: choose first available
+        moves = available_moves(board)
+        return moves[0] if moves else -1
+    return move
+
+
+def human_turn(board: List[str], player: str) -> None:
+    while True:
+        try:
+            choice = input(f"Player {player}, enter your move (1-9): ").strip()
+            if choice.lower() in ("q", "quit", "exit"):
+                print("Quitting game.")
+                raise SystemExit
+            pos = int(choice) - 1
+            if pos < 0 or pos > 8:
+                print("Please enter a number from 1 to 9.")
+                continue
+            if board[pos] != " ":
+                print("That cell is already taken. Choose another.")
+                continue
+            make_move(board, pos, player)
+            break
+        except ValueError:
+            print("Invalid input. Enter a number from 1 to 9, or 'q' to quit.")
+
+
+def main():
+    print("Tic-Tac-Toe")
+    print("1) Human vs Human")
+    print("2) Human vs Computer (unbeatable)")
+    mode = ""
+    while mode not in ("1", "2"):
+        mode = input("Choose mode (1 or 2): ").strip()
+
+    if mode == "1":
+        board = [" "] * 9
+        current = "X"
+        while True:
+            display_board(board)
+            human_turn(board, current)
+            winner = check_winner(board)
+            if winner:
+                display_board(board)
+                print(f"Player {winner} wins!")
+                break
+            if is_full(board):
+                display_board(board)
+                print("It's a draw!")
+                break
+            current = "O" if current == "X" else "X"
+    else:
+        # Human vs Computer
+        human = ""
+        while human.upper() not in ("X", "O"):
+            human = input("Do you want to be X or O? (X goes first): ").strip().upper()
+        ai = "O" if human == "X" else "X"
+        current = "X"  # X always goes first
+
+        board = [" "] * 9
+        print(f"You are {human}. Computer is {ai}.")
+        while True:
+            display_board(board)
+            if current == human:
+                human_turn(board, human)
+            else:
+                print("Computer is thinking...")
+                move = ai_move(board, ai, human)
+                if move == -1:
+                    print("No moves left.")
+                    break
+                make_move(board, move, ai)
+                print(f"Computer played {move + 1}.")
+
+            winner = check_winner(board)
+            if winner:
+                display_board(board)
+                if winner == human:
+                    print("You win! 🎉")
+                else:
+                    print("Computer wins. Try again!")
+                break
+            if is_full(board):
+                display_board(board)
+                print("It's a draw!")
+                break
+            current = "O" if current == "X" else "X"
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nGame interrupted. Goodbye!")
